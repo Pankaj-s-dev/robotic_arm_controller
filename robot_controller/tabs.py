@@ -3,21 +3,89 @@ import tkinter.messagebox
 import customtkinter
 import socket
 import time 
+from datetime import datetime
 
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
+my_socket = socket.socket()
+
 class robot_controller():
     def __init__(self) -> None:
+        # Servo angle init
+        self.servo_1_pos = 90
+        self.servo_2_pos = 90
+        self.servo_3_pos = 90
+        self.servo_4_pos = 90
+        self.servo_5_pos = 90
+        self.servo_6_pos = 90
+        self.servo_speed = 50
         self.communication_state=0
+        self.communication_button_toggle = 0
+        self.client
+        self.valid_servo_id = [1,2,3,4,5,6]
 
+    def connect(self):
+        try:
+            my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            my_socket.bind(('0.0.0.0', 8090 ))
+            my_socket.listen(0)
+            self.client, addr = my_socket.accept()
+            write = "hellow from script"
+            self.client.send(write.encode())
+            content = self.client.recv(10)
+            if len(content) ==0:
+                print("breaking")
+            else:
+                msg_recv = content.decode()
+                print(msg_recv)
+            if msg_recv == "ok":
+                print("[INFO] : Connected")
+                self.communication_state=True
+                return True
+            else:
+                return False
+        except:
+            print("[Error] : not able to communicate !")
+            return False
+
+    def disconnect(self):
+        my_socket.close()
+        self.client.close()
+        self.communication_state=False
+        print("[INFO] : Disconnected")
+
+    def write_jog_pos(self, position, servo_id):
+        while servo_id in self.valid_servo_id:
+            # tcp_msg = f"j{position}{self.servo_speed}{servo_id}"
+            try:
+                tcp_msg = "hellow"
+                self.client.send(tcp_msg.encode())
+                print(f"send TCP MSG [{tcp_msg}]")
+                time.sleep(0.1)
+                content = self.client.recv(10)
+                if len(content) == 0:
+                    print("breaking")
+                else:
+                    msg_recv = content.decode()
+                    print(msg_recv)
+                    break
+                self.client.close()
+            except:
+                print("not able to write")
+                break
+        else:
+            print(f"[ERROR] : wrong input servo id {servo_id}")
+
+    def write_trajectory(self):
+        pass
 
 class push_action():
-    def __init__(self, app_name, process_id):
+    def __init__(self, app_name, process_name, console_id_name):
         self.action_running=False
         self.app_name=app_name
-        self.process_id=process_id
+        self.process_name=process_name
 
     def start_action(self, event):
         self.action_running = True
@@ -28,9 +96,8 @@ class push_action():
 
     def perform_action(self):
         if self.action_running:
-            print(f"Action is running...{self.process_id}")
-            self.app_name.after(100, self.perform_action)  # Continue the action if the button is held down
-
+            print(f"Action is running...{self.process_name}")
+            self.app_name.after(100, self.perform_action)  # Continue the action if the button is held down  
 
 class App(customtkinter.CTk, robot_controller):
     def __init__(self):
@@ -39,13 +106,8 @@ class App(customtkinter.CTk, robot_controller):
         # initializating robot controller
         robot_controller.__init__(self)
 
-        self.servo_1_pos = 90
-        self.servo_2_pos = 90
-        self.servo_3_pos = 90
-        self.servo_4_pos = 90
-        self.servo_5_pos = 90
-        self.servo_6_pos = 90
-        self.servo_speed = 50
+        # using log_to_console as log
+        log_to_console.__init__(self)
 
         # configure window
         self.title("Robot Controller")
@@ -82,7 +144,7 @@ class App(customtkinter.CTk, robot_controller):
         self.entry = customtkinter.CTkEntry(self, placeholder_text="Robot Status : Ideal")
         self.entry.grid(row=3, column=1, padx=(20, 0), pady=(20, 20), sticky="nsew")
 
-        self.connection_btn = customtkinter.CTkButton(master=self, fg_color="red", text="Disconnected",border_width=2, text_color=("gray10", "#DCE4EE"), command=self.connect)
+        self.connection_btn = customtkinter.CTkButton(master=self, fg_color="red", text="Disconnected",border_width=2, text_color=("gray10", "#DCE4EE"), command=self.connection_handler)
         self.connection_btn.grid(row=3, column=2, padx=(20, 20), pady=(20, 20), sticky="nsew")
 
 
@@ -162,34 +224,79 @@ class App(customtkinter.CTk, robot_controller):
         self.speed_info.grid(row=2, column=12, columnspan=2,  pady=(10, 10), sticky="n")
 
         # Programming Mode mode tab grid
+        self.tabview.tab("Debug Mode").columnconfigure((0), weight=1)
+        self.tabview.tab("Debug Mode").rowconfigure(0, weight=0)
+        self.tabview.tab("Debug Mode").rowconfigure(1, weight=1)
+
+        self.console_heading = customtkinter.CTkLabel(self.tabview.tab("Debug Mode"), text="[ Debug Console logs ]")
+        self.console_heading.grid(row=0, column=0, pady=(5, 5))
+
+        self.console=customtkinter.CTkTextbox(self.tabview.tab("Debug Mode"), font=("font", 15))
+        self.console.grid(row=1, column=0, padx=(20,20),sticky="nsew")
+        self.console.insert("0.0","Hello World!\n")
+        self.console.configure(state="disabled")
+
+        # Programming Mode mode tab grid
         self.tabview.tab("Programming Mode").columnconfigure((0,1,2,3,4,5), weight=1)
         self.tabview.tab("Programming Mode").rowconfigure((0,1,2), weight=1)
 
         self.stick_for_programming=""
 
-        self.move_front = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Front", command=self.sidebar_button_event)
+        self.move_front = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Front")
         self.move_front.grid(row=0, column=1, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
 
-        self.move_back = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Back", command=self.sidebar_button_event)
+        self.action_move_front=push_action(self, "Move Front", self.console)
+        self.move_front.bind("<ButtonPress-1>", self.action_move_front.start_action)  # Bind mouse button press to start action
+        self.move_front.bind("<ButtonRelease-1>", self.action_move_front.stop_action)  # Bind mouse button release to stop action
+
+        self.move_back = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Back")
         self.move_back.grid(row=2, column=1, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
 
-        self.move_left = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Left", command=self.sidebar_button_event)
-        self.move_left.grid(row=1, column=0, pady=(10, 10), ipady=(2),sticky=self.stick_for_programming)
+        self.action_move_back=push_action(self, "Move Back", self.console)
+        self.move_back.bind("<ButtonPress-1>", self.action_move_back.start_action)  # Bind mouse button press to start action
+        self.move_back.bind("<ButtonRelease-1>", self.action_move_back.stop_action)  # Bind mouse button release to stop action
 
-        self.move_right = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Right", command=self.sidebar_button_event)
+        self.move_left = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Left")
+        self.move_left.grid(row=1, column=0, pady=(10, 10), ipady=(2),sticky=self.stick_for_programming)
+        
+        self.action_move_left=push_action(self, "Move Left", self.console)
+        self.move_left.bind("<ButtonPress-1>", self.action_move_left.start_action)  # Bind mouse button press to start action
+        self.move_left.bind("<ButtonRelease-1>", self.action_move_left.stop_action)  # Bind mouse button release to stop action
+
+        self.move_right = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Right")
         self.move_right.grid(row=1, column=2, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
 
-        self.move_up = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Up", command=self.sidebar_button_event)
+        self.action_move_right=push_action(self, "Move Right", self.console)
+        self.move_right.bind("<ButtonPress-1>", self.action_move_right.start_action)  # Bind mouse button press to start action
+        self.move_right.bind("<ButtonRelease-1>", self.action_move_right.stop_action)  # Bind mouse button release to stop action
+
+        self.move_up = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Up")
         self.move_up.grid(row=0, column=3, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
 
-        self.move_down = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Down", command=self.sidebar_button_event)
+        self.action_move_up=push_action(self, "Move Up", self.console)
+        self.move_up.bind("<ButtonPress-1>", self.action_move_up.start_action)  # Bind mouse button press to start action
+        self.move_up.bind("<ButtonRelease-1>", self.action_move_up.stop_action)  # Bind mouse button release to stop action
+
+        self.move_down = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Down")
         self.move_down.grid(row=2, column=3, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
 
-        self.open_gripper = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Open Gripper", command=self.sidebar_button_event)
+        self.action_move_down=push_action(self, "Move Down", self.console)
+        self.move_down.bind("<ButtonPress-1>", self.action_move_down.start_action)  # Bind mouse button press to start action
+        self.move_down.bind("<ButtonRelease-1>", self.action_move_down.stop_action)  # Bind mouse button release to stop action
+
+        self.open_gripper = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Open Gripper")
         self.open_gripper.grid(row=0, column=4, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
 
-        self.close_gripper = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Close Gripper", command=self.sidebar_button_event)
+        self.action_open_gripper=push_action(self, "Open Gripper", self.console)
+        self.open_gripper.bind("<ButtonPress-1>", self.action_open_gripper.start_action)  # Bind mouse button press to start action
+        self.open_gripper.bind("<ButtonRelease-1>", self.action_open_gripper.stop_action)  # Bind mouse button release to stop action
+
+        self.close_gripper = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Close Gripper")
         self.close_gripper.grid(row=2, column=4, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
+
+        self.action_close_gripper=push_action(self, "Close Gripper", self.console)
+        self.close_gripper.bind("<ButtonPress-1>", self.action_close_gripper.start_action)  # Bind mouse button press to start action
+        self.close_gripper.bind("<ButtonRelease-1>", self.action_close_gripper.stop_action)  # Bind mouse button release to stop action
 
         self.record_pos = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Record Pos", command=self.sidebar_button_event)
         self.record_pos.grid(row=0, column=5, pady=(10, 10), ipady=(2),sticky=self.stick_for_programming)
@@ -202,28 +309,6 @@ class App(customtkinter.CTk, robot_controller):
 
         self.execution_speed = customtkinter.CTkSlider( self.tabview.tab("Programming Mode"), orientation="horizontal", command=self.speed_updater)
         self.execution_speed.grid(row=1, column=3, columnspan=2, padx=(20, 20), sticky="ew")
-
-        self.action_stop_execution=push_action(self, "Stop Exexution")
-        self.stop_execution.bind("<ButtonPress-1>", self.action_stop_execution.start_action)  # Bind mouse button press to start action
-        self.stop_execution.bind("<ButtonRelease-1>", self.action_stop_execution.stop_action)  # Bind mouse button release to stop action
-
-        self.action_start_execution=push_action(self, "Start Execution")
-        self.start_execution.bind("<ButtonPress-1>", self.action_start_execution.start_action)
-        self.start_execution.bind("<ButtonRelease-1>", self.action_start_execution.stop_action)
-
-
-        # Programming Mode mode tab grid
-        self.tabview.tab("Debug Mode").columnconfigure((0), weight=1)
-        self.tabview.tab("Debug Mode").rowconfigure(0, weight=0)
-        self.tabview.tab("Debug Mode").rowconfigure(1, weight=1)
-
-        self.console_heading = customtkinter.CTkLabel(self.tabview.tab("Debug Mode"), text="[ Debug Console logs ]")
-        self.console_heading.grid(row=0, column=0, pady=(5, 5))
-
-        self.console=customtkinter.CTkTextbox(self.tabview.tab("Debug Mode"))
-        self.console.grid(row=1, column=0, padx=(20,20),sticky="nsew")
-        self.console.insert("0.0","Hello World!\n")
-        self.console.configure(state="disabled")
 
 
         self.set_initial_parameter()
@@ -252,36 +337,42 @@ class App(customtkinter.CTk, robot_controller):
         slider_val=self.translate(value, 1, 100, 1, 180)
         self.servo_1_pos=slider_val
         self.seg_button_1.set("Servo 1")
+        self.write_jog_pos(self.servo_1_pos,  1)
         self.position_entry_updater()
 
     def servo_2_position_updater(self, value):
         self.servo_2_state.set(value) 
         self.servo_2_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 2")
+        self.write_jog_pos(self.servo_2_pos, 2)
         self.position_entry_updater()
 
     def servo_3_position_updater(self, value):
         self.servo_3_state.set(value) 
         self.servo_3_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 3")
+        self.write_jog_pos(self.servo_3_pos, 3)
         self.position_entry_updater()
 
     def servo_4_position_updater(self, value):
         self.servo_4_state.set(value) 
         self.servo_4_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 4")
+        self.write_jog_pos(self.servo_4_pos, 4)
         self.position_entry_updater()
 
     def servo_5_position_updater(self, value):
         self.servo_5_state.set(value) 
         self.servo_5_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 5")
+        self.write_jog_pos(self.servo_5_pos, 5)
         self.position_entry_updater()
 
     def servo_6_position_updater(self, value):
         self.servo_6_state.set(value) 
         self.servo_6_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 6")
+        self.write_jog_pos(self.servo_6_pos, 6)
         self.position_entry_updater()
 
     def speed_updater(self, value):
@@ -331,6 +422,7 @@ class App(customtkinter.CTk, robot_controller):
 
     def translate(self, value, leftMin, leftMax, rightMin, rightMax):
         value = value*100
+
         # Figure out how 'wide' each range is
         leftSpan = leftMax - leftMin
         rightSpan = rightMax - rightMin
@@ -339,16 +431,49 @@ class App(customtkinter.CTk, robot_controller):
         valueScaled = float(value - leftMin) / float(leftSpan)
 
         # Convert the 0-1 range into a value in the right range.
-        return int(rightMin + (valueScaled * rightSpan))
+        calculated_value = int(rightMin + (valueScaled * rightSpan))
+        if calculated_value <=0:
+            calculated_value=1
 
-    def connect(self):
+        return calculated_value
+
+    def connection_handler(self):
         print("connect to robot called")
         if self.communication_state == 0:
-            self.connection_btn.configure(fg_color="green",text="Connected")
-            self.communication_state=1
+            log_to_console.info(self, "Connect to robot is requested")
+            if self.connect():
+                self.connection_btn.configure(fg_color="green",text="Connected")
+                log_to_console.info(self, "Connect to robot is requested")
+            else:
+                log_to_console.error(self, "Connect to robot is faild")
+
         elif self.communication_state == 1:
             self.connection_btn.configure(fg_color="red", text="Disconnected")
-            self.communication_state=0   
+            self.disconnect()
+            log_to_console.warning(self, "Disconnect to robot is requested")
+
+class log_to_console(App):
+    def __init__(self):
+        pass
+
+    def info(self, msg):
+        time_stamp = datetime.now()
+        self.console.configure(state="normal")
+        self.console.insert("insert",f"[INFO] : [{time_stamp}] -> [{msg}]\n")
+        self.console.configure(state="disabled")
+
+    def warning(self, msg):
+        time_stamp = datetime.now()
+        self.console.configure(state="normal")
+        self.console.insert("insert",f"[WARN] : [{time_stamp}] -> [{msg}]\n")
+        self.console.configure(state="disabled")
+
+    def error(self, msg):
+        time_stamp = datetime.now()
+        self.console.configure(state="normal")
+        self.console.insert("insert",f"[ERROR] : [{time_stamp}] -> [{msg}]\n")
+        self.console.configure(state="disabled")
+
 
 
 if __name__ == "__main__":
