@@ -36,6 +36,7 @@ class robot_controller():
         self.servo_5_pos_written = 90
         self.servo_6_pos_written = 100
         self.programing_mode=False
+        self.logself = 0
 
         self.recorded_pos= []
 
@@ -68,10 +69,12 @@ class robot_controller():
             self.ser = serial.Serial('/dev/ttyUSB0', 115200)
             if self.ser.is_open:
                 print("[INFO] : Connected")
+                log_to_console.info(self.logself, "Connected")
                 self.communication_state=True
                 return True
         except:
             print("[Error] : not able to communicate !")
+            log_to_console.error(self.logself, "Unable to connect")
             return False
     
     def disconnect(self):
@@ -88,6 +91,7 @@ class robot_controller():
     def data_diff_checker(self):
         # while True:
         print("running")
+        log_to_console.info(self.logself, "data_diff_checker running")
         while self.communication_state:
             if self.servo_1_pos != self.servo_1_pos_written:
                 self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
@@ -115,8 +119,10 @@ class robot_controller():
                 print(self.servo_5_pos, self.servo_5_pos_written)
                 print(self.servo_6_pos, self.servo_6_pos_written)
                 print("wrong input")
+                log_to_console.warning(self.logself, "Input Provided is Wrong")
                 break
         else:
+            log_to_console.info(self.logself, "Please connect the controller to the Robotic arm")
             print("please connect the Controller to Robot")
 
         return
@@ -127,16 +133,20 @@ class robot_controller():
             try:
                 tcp_msg = f"[{execution_type}][{position}][{self.servo_speed}][{servo_id}]"
                 print(f"send TCP MSG [{tcp_msg}]")
+                log_to_console.info(self.logself, f"Sent frame {tcp_msg}")
                 self.ser.write(bytes(tcp_msg, 'utf-8'))
                 break
             except:
                 print("[Error] : ocurred in jog while writing")
+                log_to_console.error(self.logself, "Ocurred in jog while writing")
                 break
         else:
             print(f"[ERROR] : wrong input servo id {servo_id}")
+            log_to_console.error(self.logself, f"wrong input servo id {servo_id}")
 
     def pose_updater_after_written(self, servo_1_pos, servo_2_pos, servo_3_pos, servo_4_pos, servo_5_pos, servo_6_pos):
         print("updating")
+        log_to_console.info(self.logself, f"Position updating after Move Execution")
         self.servo_1_pos_written = servo_1_pos
         self.servo_2_pos_written = servo_2_pos
         self.servo_3_pos_written = servo_3_pos
@@ -144,6 +154,7 @@ class robot_controller():
         self.servo_5_pos_written = servo_5_pos
         self.servo_6_pos_written = servo_6_pos
         print("updated")
+        log_to_console.info(self.logself, f"Position Updated")
 
     def rx_tx_with_robot(self, servo_1_pos, servo_2_pos, servo_3_pos, servo_4_pos, servo_5_pos, servo_6_pos, servo_speed):
         while True:
@@ -151,22 +162,27 @@ class robot_controller():
                 self.pose_updater_after_written(servo_1_pos, servo_2_pos, servo_3_pos, servo_4_pos, servo_5_pos, servo_6_pos)
                 msg_format = f"[{servo_1_pos}][{servo_2_pos}][{servo_3_pos}][{servo_4_pos}][{servo_5_pos}][{servo_6_pos}][{servo_speed}]"
                 print("writing")
+                log_to_console.info(self.logself, f"Writing data frame to robot {msg_format}")
                 self.ser.write(bytes(msg_format, 'utf-8'))
                 print("written")
                 if self.programing_mode:
                     content = self.ser.readline()
                     content = str(content, 'UTF-8')
                     print(content)
+                    log_to_console.info(self.logself, f"Recived frame {content}")
                     if content == "ok\r\n":
                         print("writing done")
+                        log_to_console.info(self.logself, f"writing done")
                         break
                     else:
                         print("error")
+                        log_to_console.error(self.logself, f"Response Error")
                         break
                 else:
                     break
             except:
                 print("error ocuured while writing")
+                log_to_console.error(self.logself, f"Error ocuured while writing rx_tx_with_robot")
                 break
     
     def run_recorded_pos(self, index):
@@ -174,20 +190,26 @@ class robot_controller():
             try:
                 msg_format = f"{self.recorded_pos[index]}"
                 print("writing")
+                log_to_console.info(self.logself, f"Sending frame to controller .....")
                 self.ser.write(bytes(msg_format, 'utf-8'))
                 print("written")
+                log_to_console.info(self.logself, f"Frame sent.")
                 content = self.ser.readline()
                 content = str(content, 'UTF-8')
                 print(content)
+                log_to_console.info(self.logself, f"Recived frame {content}")
                 if content == "ok\r\n":
                     print("writing done")
+                    log_to_console.info(self.logself, f"writing done")
                     break
                 else:
                     print("error")
+                    log_to_console.error(self.logself, f"Response Error")
                     break
 
             except:
                 print("error ocuured while writing")
+                log_to_console.error(self.logself, f"Error ocuured while writing rx_tx_with_robot")
                 break
 class push_action():
     def __init__(self, app_name, process_name, console_id_name):
@@ -343,8 +365,9 @@ class App(customtkinter.CTk, robot_controller):
 
         self.console=customtkinter.CTkTextbox(self.tabview.tab("Debug Mode"), font=("font", 15))
         self.console.grid(row=1, column=0, padx=(20,20),sticky="nsew")
-        self.console.insert("0.0","Hello World!\n")
+        self.console.insert("0.0",f"[INFO] [INIT] [{datetime.now()}] -> API has started.\n")
         self.console.configure(state="disabled")
+        self.logself=self
 
         # Programming Mode mode tab grid
         self.tabview.tab("Programming Mode").columnconfigure((0,1,2,3,4,5), weight=1)
@@ -442,6 +465,13 @@ class App(customtkinter.CTk, robot_controller):
         self.servo_6_pos_info.configure(state="disabled")
         self.speed_info.configure(state="disabled")
 
+        self.servo_1_state.set(self.translate_slider(self.servo_1_pos, 0, 180, 0, 1))
+        self.servo_2_state.set(self.translate_slider(self.servo_2_pos, 0, 180, 0, 1))
+        self.servo_3_state.set(self.translate_slider(self.servo_3_pos, 0, 180, 0, 1))
+        self.servo_4_state.set(self.translate_slider(self.servo_4_pos, 0, 180, 0, 1))
+        self.servo_5_state.set(self.translate_slider(self.servo_5_pos, 0, 180, 0, 1))
+        self.servo_6_state.set(self.translate_slider(self.servo_6_pos, 0, 180, 0, 1))
+
     def servo_1_position_updater(self, value):
         self.servo_1_state.set(value) 
         slider_val=self.translate(value, 1, 100, 1, 180)
@@ -518,6 +548,7 @@ class App(customtkinter.CTk, robot_controller):
 
 
     def record_pos(self):
+        log_to_console.info(self, f"Recorded Cordinates with frame : [4][{self.servo_1_pos}][{self.servo_2_pos}][{self.servo_3_pos}][{self.servo_4_pos}][{self.servo_5_pos}][{self.servo_6_pos}][{self.servo_speed}]")
         self.recorded_pos.append(f"[4][{self.servo_1_pos}][{self.servo_2_pos}][{self.servo_3_pos}][{self.servo_4_pos}][{self.servo_5_pos}][{self.servo_6_pos}][{self.servo_speed}]")
 
     def execute_(self):
@@ -525,19 +556,24 @@ class App(customtkinter.CTk, robot_controller):
         while no_of_cycle < len(self.recorded_pos):
             self.run_recorded_pos(no_of_cycle)
             print("executing", self.recorded_pos[no_of_cycle])
+            log_to_console.info(self, f"executing{self.recorded_pos[no_of_cycle]}")
             no_of_cycle+=1
         print("done")
+        log_to_console.info(self, "Execution Done")
 
     def start_program(self):
         print("starting program")
+        log_to_console.info(self, "Starting Execution program")
         if (len(self.recorded_pos)) == 0:
             print("please record the trajectory")
+            log_to_console.error(self, "please record the trajectory")
             return
         t1 = threading.Thread(target=self.execute_)
         t1.start()
 
     def stop_program(self):
         self.recorded_pos.clear()
+        log_to_console.info(self, "Execution has been stoped and data has been cleared")
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
@@ -568,6 +604,20 @@ class App(customtkinter.CTk, robot_controller):
 
         return calculated_value
 
+    def translate_slider(self, value, leftMin, leftMax, rightMin, rightMax):
+
+        # Figure out how 'wide' each range is
+        leftSpan = leftMax - leftMin
+        rightSpan = rightMax - rightMin
+
+        # Convert the left range into a 0-1 range (float)
+        valueScaled = float(value - leftMin) / float(leftSpan)
+
+        # Convert the 0-1 range into a value in the right range.
+        calculated_value = float(rightMin + (valueScaled * rightSpan))
+
+        return calculated_value
+    
     def connection_handler(self):
         print("connect to robot called")
         if self.communication_state == 0:
@@ -593,19 +643,19 @@ class log_to_console(App):
     def info(self, msg):
         time_stamp = datetime.now()
         self.console.configure(state="normal")
-        self.console.insert("insert",f"[INFO] : [{time_stamp}] -> [{msg}]\n")
+        self.console.insert("insert",f"[INFO]    : [{time_stamp}] -> [ {msg} ]\n")
         self.console.configure(state="disabled")
 
     def warning(self, msg):
         time_stamp = datetime.now()
         self.console.configure(state="normal")
-        self.console.insert("insert",f"[WARN] : [{time_stamp}] -> [{msg}]\n")
+        self.console.insert("insert",f"[WARN]    : [{time_stamp}] -> [ {msg} ]\n")
         self.console.configure(state="disabled")
 
     def error(self, msg):
         time_stamp = datetime.now()
         self.console.configure(state="normal")
-        self.console.insert("insert",f"[ERROR] : [{time_stamp}] -> [{msg}]\n")
+        self.console.insert("insert",f"[ERROR] : [{time_stamp}] -> [ {msg} ]\n")
         self.console.configure(state="disabled")
 
 
