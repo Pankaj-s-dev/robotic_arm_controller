@@ -23,7 +23,7 @@ class robot_controller():
         self.servo_4_pos = 180
         self.servo_5_pos = 90
         self.servo_6_pos = 100
-        self.servo_speed = 100
+        self.servo_speed = 50
         self.communication_state=0
         self.communication_button_toggle = 0
         self.client
@@ -36,6 +36,8 @@ class robot_controller():
         self.servo_5_pos_written = 90
         self.servo_6_pos_written = 100
         self.programing_mode=False
+
+        self.recorded_pos= []
 
     # def connect(self):
     #     try:
@@ -167,7 +169,26 @@ class robot_controller():
                 print("error ocuured while writing")
                 break
     
+    def run_recorded_pos(self, index):
+        while True:
+            try:
+                msg_format = f"{self.recorded_pos[index]}"
+                print("writing")
+                self.ser.write(bytes(msg_format, 'utf-8'))
+                print("written")
+                content = self.ser.readline()
+                content = str(content, 'UTF-8')
+                print(content)
+                if content == "ok\r\n":
+                    print("writing done")
+                    break
+                else:
+                    print("error")
+                    break
 
+            except:
+                print("error ocuured while writing")
+                break
 class push_action():
     def __init__(self, app_name, process_name, console_id_name):
         self.action_running=False
@@ -387,13 +408,13 @@ class App(customtkinter.CTk, robot_controller):
         self.close_gripper.bind("<ButtonPress-1>", self.action_close_gripper.start_action)  # Bind mouse button press to start action
         self.close_gripper.bind("<ButtonRelease-1>", self.action_close_gripper.stop_action)  # Bind mouse button release to stop action
 
-        self.record_pos = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Record Pos", command=self.sidebar_button_event)
+        self.record_pos = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Record Pos", command=self.record_pos)
         self.record_pos.grid(row=0, column=5, pady=(10, 10), ipady=(2),sticky=self.stick_for_programming)
 
-        self.start_execution = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Start Execution", command=self.sidebar_button_event)
+        self.start_execution = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Start Execution", command=self.start_program)
         self.start_execution.grid(row=1, column=5, pady=(10, 10), ipady=(2),sticky=self.stick_for_programming)
 
-        self.stop_execution = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Stop Execution", command=self.sidebar_button_event)
+        self.stop_execution = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Stop Execution", command=self.stop_program)
         self.stop_execution.grid(row=2, column=5, pady=(10, 10), ipady=(2), sticky=self.stick_for_programming)
 
         self.execution_speed = customtkinter.CTkSlider( self.tabview.tab("Programming Mode"), orientation="horizontal", command=self.speed_updater)
@@ -496,9 +517,27 @@ class App(customtkinter.CTk, robot_controller):
         self.servo_6_pos_info.configure(state="disabled")
 
 
-    def open_input_dialog_event(self):
-        dialog = customtkinter.CTkInputDialog(text="Type in a number:", title="CTkInputDialog")
-        print("CTkInputDialog:", dialog.get_input())
+    def record_pos(self):
+        self.recorded_pos.append(f"[4][{self.servo_1_pos}][{self.servo_2_pos}][{self.servo_3_pos}][{self.servo_4_pos}][{self.servo_5_pos}][{self.servo_6_pos}][{self.servo_speed}]")
+
+    def execute_(self):
+        no_of_cycle = 0
+        while no_of_cycle < len(self.recorded_pos):
+            self.run_recorded_pos(no_of_cycle)
+            print("executing", self.recorded_pos[no_of_cycle])
+            no_of_cycle+=1
+        print("done")
+
+    def start_program(self):
+        print("starting program")
+        if (len(self.recorded_pos)) == 0:
+            print("please record the trajectory")
+            return
+        t1 = threading.Thread(target=self.execute_)
+        t1.start()
+
+    def stop_program(self):
+        self.recorded_pos.clear()
 
     def change_appearance_mode_event(self, new_appearance_mode: str):
         customtkinter.set_appearance_mode(new_appearance_mode)
