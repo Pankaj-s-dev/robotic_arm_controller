@@ -1,15 +1,18 @@
-import serial
+import tkinter as tk
+import datetime
 import time
-#Serial takes two parameters: serial device and baudrate
-ser = serial.Serial('/dev/ttyUSB0', 115200)
-print(ser.is_open) 
 
-write_b = "hellow boy"
-
-while True:
-   ser.write(bytes(write_b, 'utf-8'))
-   data = str(ser.readline(), 'UTF-8')
-   print(data)
+def timer():
+   print(datetime.datetime.now())
    time.sleep(1)
+   app.after(100, timer)
 
- 
+app = tk.Tk()
+app.title('Timer')
+
+app.after(1000, timer)
+
+exit_button = tk.Button(app, text="Exit", fg="red", command=app.destroy)
+exit_button.pack()
+
+app.mainloop()

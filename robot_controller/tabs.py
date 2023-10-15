@@ -18,23 +18,24 @@ class robot_controller():
     def __init__(self) -> None:
         # Servo angle init
         self.servo_1_pos = 90
-        self.servo_2_pos = 90
-        self.servo_3_pos = 90
-        self.servo_4_pos = 90
+        self.servo_2_pos = 130
+        self.servo_3_pos = 130
+        self.servo_4_pos = 180
         self.servo_5_pos = 90
-        self.servo_6_pos = 90
-        self.servo_speed = 50
+        self.servo_6_pos = 100
+        self.servo_speed = 100
         self.communication_state=0
         self.communication_button_toggle = 0
         self.client
         self.valid_servo_id = [1,2,3,4,5,6]
         self.ser = False
         self.servo_1_pos_written = 90
-        self.servo_2_pos_written = 90
-        self.servo_3_pos_written = 90
-        self.servo_4_pos_written = 90
+        self.servo_2_pos_written = 130
+        self.servo_3_pos_written = 130
+        self.servo_4_pos_written = 180
         self.servo_5_pos_written = 90
-        self.servo_6_pos_written = 90
+        self.servo_6_pos_written = 100
+        self.programing_mode=False
 
     # def connect(self):
     #     try:
@@ -84,29 +85,39 @@ class robot_controller():
 
     def data_diff_checker(self):
         # while True:
-            # print("running")
+        print("running")
         while self.communication_state:
             if self.servo_1_pos != self.servo_1_pos_written:
-                self.rx_tx_with_robot()
+                self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
                 break
             elif self.servo_2_pos != self.servo_2_pos_written:
-                self.rx_tx_with_robot()
+                self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
                 break
             elif self.servo_3_pos != self.servo_3_pos_written:
-                self.rx_tx_with_robot()
+                self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
                 break
             elif self.servo_4_pos != self.servo_4_pos_written:
-                self.rx_tx_with_robot()
+                self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
                 break
             elif self.servo_5_pos != self.servo_5_pos_written:
-                self.rx_tx_with_robot()
+                self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
                 break
             elif self.servo_6_pos != self.servo_6_pos_written:
-                self.rx_tx_with_robot()
+                self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
                 break
             else:
+                print(self.servo_1_pos, self.servo_1_pos_written)
+                print(self.servo_2_pos, self.servo_2_pos_written)
+                print(self.servo_3_pos, self.servo_3_pos_written)
+                print(self.servo_4_pos, self.servo_4_pos_written)
+                print(self.servo_5_pos, self.servo_5_pos_written)
+                print(self.servo_6_pos, self.servo_6_pos_written)
                 print("wrong input")
                 break
+        else:
+            print("please connect the Controller to Robot")
+
+        return
 
     def write_jog_pos(self, position, servo_id):
         execution_type = 1
@@ -117,28 +128,35 @@ class robot_controller():
         else:
             print(f"[ERROR] : wrong input servo id {servo_id}")
 
-    def pose_updater_after_written(self):
-        self.servo_1_pos_written = self.servo_1_pos
-        self.servo_2_pos_written = self.servo_2_pos
-        self.servo_3_pos_written = self.servo_3_pos
-        self.servo_4_pos_written = self.servo_4_pos
-        self.servo_5_pos_written = self.servo_5_pos
-        self.servo_6_pos_written = self.servo_6_pos
+    def pose_updater_after_written(self, servo_1_pos, servo_2_pos, servo_3_pos, servo_4_pos, servo_5_pos, servo_6_pos):
+        print("updating")
+        self.servo_1_pos_written = servo_1_pos
+        self.servo_2_pos_written = servo_2_pos
+        self.servo_3_pos_written = servo_3_pos
+        self.servo_4_pos_written = servo_4_pos
+        self.servo_5_pos_written = servo_5_pos
+        self.servo_6_pos_written = servo_6_pos
+        print("updated")
 
-    def rx_tx_with_robot(self):
+    def rx_tx_with_robot(self, servo_1_pos, servo_2_pos, servo_3_pos, servo_4_pos, servo_5_pos, servo_6_pos, servo_speed):
         while True:
             try:
-                msg_format = f"[{self.servo_1_pos}][{self.servo_2_pos}][{self.servo_3_pos}][{self.servo_4_pos}][{self.servo_5_pos}][{self.servo_6_pos}][{self.servo_speed}]"
-                self.pose_updater_after_written()
+                self.pose_updater_after_written(servo_1_pos, servo_2_pos, servo_3_pos, servo_4_pos, servo_5_pos, servo_6_pos)
+                msg_format = f"[{servo_1_pos}][{servo_2_pos}][{servo_3_pos}][{servo_4_pos}][{servo_5_pos}][{servo_6_pos}][{servo_speed}]"
+                print("writing")
                 self.ser.write(bytes(msg_format, 'utf-8'))
-                content = self.ser.readline()
-                content = str(content, 'UTF-8')
-                print(content)
-                if content == "ok\r\n":
-                    print("writing done")
-                    break
+                print("written")
+                if self.programing_mode:
+                    content = self.ser.readline()
+                    content = str(content, 'UTF-8')
+                    print(content)
+                    if content == "ok\r\n":
+                        print("writing done")
+                        break
+                    else:
+                        print("error")
+                        break
                 else:
-                    print("error")
                     break
             except:
                 print("error ocuured while writing")
@@ -403,35 +421,35 @@ class App(customtkinter.CTk, robot_controller):
         slider_val=self.translate(value, 1, 100, 1, 180)
         self.servo_1_pos=slider_val
         self.seg_button_1.set("Servo 1")
-        self.data_diff_checker()
+        threading.Thread(target=self.data_diff_checker).start()
         self.position_entry_updater()
 
     def servo_2_position_updater(self, value):
         self.servo_2_state.set(value) 
         self.servo_2_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 2")
-        self.data_diff_checker()
+        threading.Thread(target=self.data_diff_checker).start()
         self.position_entry_updater()
 
     def servo_3_position_updater(self, value):
         self.servo_3_state.set(value) 
         self.servo_3_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 3")
-        self.data_diff_checker()
+        threading.Thread(target=self.data_diff_checker).start()
         self.position_entry_updater()
 
     def servo_4_position_updater(self, value):
         self.servo_4_state.set(value) 
         self.servo_4_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 4")
-        self.data_diff_checker()
+        threading.Thread(target=self.data_diff_checker).start()
         self.position_entry_updater()
 
     def servo_5_position_updater(self, value):
         self.servo_5_state.set(value) 
         self.servo_5_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 5")
-        self.data_diff_checker()
+        threading.Thread(target=self.data_diff_checker).start()
         self.position_entry_updater()
 
     def servo_6_position_updater(self, value):
@@ -441,7 +459,7 @@ class App(customtkinter.CTk, robot_controller):
             self.servo_6_pos = 70
         self.servo_6_pos = value
         self.seg_button_1.set("Servo 6")
-        self.data_diff_checker()
+        threading.Thread(target=self.data_diff_checker).start()
         self.position_entry_updater()
 
     def speed_updater(self, value):
