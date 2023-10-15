@@ -2,84 +2,137 @@ import tkinter
 import tkinter.messagebox
 import customtkinter
 import socket
+import serial
 import time 
 from datetime import datetime
+import threading
 
 
 customtkinter.set_appearance_mode("System")  # Modes: "System" (standard), "Dark", "Light"
 customtkinter.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
 
 my_socket = socket.socket()
+servo_1_pos = 90
+servo_2_pos = 90
+servo_3_pos = 90
+servo_4_pos = 90
+servo_5_pos = 90
+servo_6_pos = 90
+servo_speed = 50
+communication_state=0
+
 
 class robot_controller():
     def __init__(self) -> None:
         # Servo angle init
-        self.servo_1_pos = 90
-        self.servo_2_pos = 90
-        self.servo_3_pos = 90
-        self.servo_4_pos = 90
-        self.servo_5_pos = 90
-        self.servo_6_pos = 90
-        self.servo_speed = 50
-        self.communication_state=0
         self.communication_button_toggle = 0
-        self.client
         self.valid_servo_id = [1,2,3,4,5,6]
+        self.ser = False
+        self.servo_1_pos_written = 90
+        self.servo_2_pos_written = 90
+        self.servo_3_pos_written = 90
+        self.servo_4_pos_written = 90
+        self.servo_5_pos_written = 90
+        self.servo_6_pos_written = 90
+
+    # def connect(self):
+    #     try:
+    #         my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    #         my_socket.bind(('0.0.0.0', 8090 ))
+    #         my_socket.listen(0)
+    #         self.client, addr = my_socket.accept()
+    #         write = "hellow from script"
+    #         self.client.send(write.encode())
+    #         content = self.client.recv(10)
+    #         if len(content) ==0:
+    #             print("breaking")
+    #         else:
+    #             msg_recv = content.decode()
+    #             print(msg_recv)
+    #         if msg_recv == "ok":
+    #             print("[INFO] : Connected")
+    #             communication_state=True
+    #             return True
+    #         else:
+    #             return False
+    #     except:
+    #         print("[Error] : not able to communicate !")
+    #         return False
 
     def connect(self):
         try:
-            my_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            my_socket.bind(('0.0.0.0', 8090 ))
-            my_socket.listen(0)
-            self.client, addr = my_socket.accept()
-            write = "hellow from script"
-            self.client.send(write.encode())
-            content = self.client.recv(10)
-            if len(content) ==0:
-                print("breaking")
-            else:
-                msg_recv = content.decode()
-                print(msg_recv)
-            if msg_recv == "ok":
+            self.ser = serial.Serial('/dev/ttyUSB0', 115200)
+            if self.ser.is_open:
                 print("[INFO] : Connected")
-                self.communication_state=True
+                communication_state=True
                 return True
-            else:
-                return False
         except:
             print("[Error] : not able to communicate !")
             return False
-
+    
     def disconnect(self):
-        my_socket.close()
-        self.client.close()
-        self.communication_state=False
+        self.ser.close()
+        communication_state=False
         print("[INFO] : Disconnected")
 
+    # def disconnect(self):
+    #     my_socket.close()
+    #     self.client.close()
+    #     communication_state=False
+    #     print("[INFO] : Disconnected")
+
+    def data_diff_checker(self):
+        while True:
+            # print("running")
+            while communication_state:
+                if servo_1_pos != self.servo_1_pos_written:
+                    self.rx_tx_with_robot()
+                elif servo_2_pos != self.servo_2_pos_written:
+                    self.rx_tx_with_robot()
+                elif servo_3_pos != self.servo_3_pos_written:
+                    self.rx_tx_with_robot()
+                elif servo_4_pos != self.servo_4_pos_written:
+                    self.rx_tx_with_robot()
+                elif servo_5_pos != self.servo_5_pos_written:
+                    self.rx_tx_with_robot()
+                elif servo_6_pos != self.servo_6_pos_written:
+                    self.rx_tx_with_robot()
+
     def write_jog_pos(self, position, servo_id):
+        execution_type = 1
         while servo_id in self.valid_servo_id:
-            # tcp_msg = f"j{position}{self.servo_speed}{servo_id}"
-            try:
-                tcp_msg = "hellow"
-                self.client.send(tcp_msg.encode())
-                print(f"send TCP MSG [{tcp_msg}]")
-                time.sleep(0.1)
-                content = self.client.recv(10)
-                if len(content) == 0:
-                    print("breaking")
-                else:
-                    msg_recv = content.decode()
-                    print(msg_recv)
-                    break
-                self.client.close()
-            except:
-                print("not able to write")
-                break
+            tcp_msg = f"[{execution_type}][{position}][{servo_speed}][{servo_id}]"
+            print(f"send TCP MSG [{tcp_msg}]")
+            
         else:
             print(f"[ERROR] : wrong input servo id {servo_id}")
 
-    def write_trajectory(self):
-        pass
+    def pose_updater_after_written(self):
+        self.servo_1_pos_written = servo_1_pos
+        self.servo_2_pos_written = servo_2_pos
+        self.servo_3_pos_written = servo_3_pos
+        self.servo_4_pos_written = servo_4_pos
+        self.servo_5_pos_written = servo_5_pos
+        self.servo_6_pos_written = servo_6_pos
+
+    def rx_tx_with_robot(self):
+        while True:
+            try:
+                msg_format = f"[{servo_1_pos}][{servo_2_pos}][{servo_3_pos}][{servo_4_pos}][{servo_5_pos}][{servo_6_pos}][{servo_speed}]"
+                self.pose_updater_after_written()
+                self.ser.write(bytes(msg_format, 'utf-8'))
+                content = self.ser.readline()
+                content = str(content, 'UTF-8')
+                print(content)
+                if content == "ok\r\n":
+                    print("writing done")
+                    break
+                else:
+                    print("error")
+                    break
+            except:
+                print("error ocuured while writing")
+    
 
 class push_action():
     def __init__(self, app_name, process_name, console_id_name):
@@ -99,12 +152,13 @@ class push_action():
             print(f"Action is running...{self.process_name}")
             self.app_name.after(100, self.perform_action)  # Continue the action if the button is held down  
 
-class App(customtkinter.CTk, robot_controller):
+class App(customtkinter.CTk):
     def __init__(self):
         super().__init__()
 
         # initializating robot controller
         robot_controller.__init__(self)
+        self.connect_method = robot_controller()
 
         # using log_to_console as log
         log_to_console.__init__(self)
@@ -202,25 +256,25 @@ class App(customtkinter.CTk, robot_controller):
         self.speed_state = customtkinter.CTkProgressBar( self.tabview.tab("Manual Mode"), orientation="vertical")
         self.speed_state.grid(row=self.row_for_slider, column=13, padx=(10, 10), pady=(10, 10), sticky="ns")
     
-        self.servo_1_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 1 Pos : "+ str(self.servo_1_pos) +" deg")
+        self.servo_1_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 1 Pos : "+ str(servo_1_pos) +" deg")
         self.servo_1_pos_info.grid(row=2, column=0, columnspan=2,  pady=(10, 10), sticky="n")        
 
-        self.servo_2_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 2 Pos : "+ str(self.servo_2_pos) +" deg")
+        self.servo_2_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 2 Pos : "+ str(servo_2_pos) +" deg")
         self.servo_2_pos_info.grid(row=2, column=2, columnspan=2,  pady=(10, 10), sticky="n") 
 
-        self.servo_3_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 3 Pos : "+ str(self.servo_3_pos) +" deg")
+        self.servo_3_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 3 Pos : "+ str(servo_3_pos) +" deg")
         self.servo_3_pos_info.grid(row=2, column=4, columnspan=2,  pady=(10, 10), sticky="n") 
 
-        self.servo_4_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 4 Pos : "+ str(self.servo_4_pos) +" deg")
+        self.servo_4_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 4 Pos : "+ str(servo_4_pos) +" deg")
         self.servo_4_pos_info.grid(row=2, column=6, columnspan=2,  pady=(10, 10), sticky="n") 
 
-        self.servo_5_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 5 Pos : "+ str(self.servo_5_pos) +" deg")
+        self.servo_5_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 5 Pos : "+ str(servo_5_pos) +" deg")
         self.servo_5_pos_info.grid(row=2, column=8, columnspan=2,  pady=(10, 10), sticky="n") 
 
-        self.servo_6_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 6 Pos : "+ str(self.servo_6_pos) +" deg")
+        self.servo_6_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 6 Pos : "+ str(servo_6_pos) +" deg")
         self.servo_6_pos_info.grid(row=2, column=10, columnspan=2,  pady=(10, 10), sticky="n") 
 
-        self.speed_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo Speed : "+ str(self.servo_speed) +" %")
+        self.speed_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo Speed : "+ str(servo_speed) +" %")
         self.speed_info.grid(row=2, column=12, columnspan=2,  pady=(10, 10), sticky="n")
 
         # Programming Mode mode tab grid
@@ -333,54 +387,55 @@ class App(customtkinter.CTk, robot_controller):
         self.speed_info.configure(state="disabled")
 
     def servo_1_position_updater(self, value):
+        global servo_1_pos
         self.servo_1_state.set(value) 
         slider_val=self.translate(value, 1, 100, 1, 180)
-        self.servo_1_pos=slider_val
+        servo_1_pos=slider_val
         self.seg_button_1.set("Servo 1")
-        self.write_jog_pos(self.servo_1_pos,  1)
         self.position_entry_updater()
 
     def servo_2_position_updater(self, value):
+        global servo_2_pos
         self.servo_2_state.set(value) 
-        self.servo_2_pos=self.translate(value, 1, 100, 1, 180)
+        servo_2_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 2")
-        self.write_jog_pos(self.servo_2_pos, 2)
         self.position_entry_updater()
 
     def servo_3_position_updater(self, value):
+        global servo_3_pos
         self.servo_3_state.set(value) 
-        self.servo_3_pos=self.translate(value, 1, 100, 1, 180)
+        servo_3_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 3")
-        self.write_jog_pos(self.servo_3_pos, 3)
         self.position_entry_updater()
 
     def servo_4_position_updater(self, value):
+        global servo_4_pos
         self.servo_4_state.set(value) 
-        self.servo_4_pos=self.translate(value, 1, 100, 1, 180)
+        servo_4_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 4")
-        self.write_jog_pos(self.servo_4_pos, 4)
         self.position_entry_updater()
 
     def servo_5_position_updater(self, value):
+        global servo_5_pos
         self.servo_5_state.set(value) 
-        self.servo_5_pos=self.translate(value, 1, 100, 1, 180)
+        servo_5_pos = self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 5")
-        self.write_jog_pos(self.servo_5_pos, 5)
         self.position_entry_updater()
 
     def servo_6_position_updater(self, value):
+        global servo_6_pos
         self.servo_6_state.set(value) 
-        self.servo_6_pos=self.translate(value, 1, 100, 1, 180)
+        servo_6_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 6")
-        self.write_jog_pos(self.servo_6_pos, 6)
         self.position_entry_updater()
 
     def speed_updater(self, value):
+        global servo_speed
         self.speed_state.set(value)
-        self.servo_speed=self.translate(value, 1, 100, 1, 100)
+        servo_speed=self.translate(value, 1, 100, 1, 100)
         self.seg_button_1.set("Servo Speed")
         self.speed_info.configure(state="normal")
-        self.speed_info.configure(placeholder_text="Servo Speed : "+ str(self.servo_speed) +" %")
+        self.speed_info.configure(placeholder_text="Servo Speed : "+ str(servo_speed) +" %")
         self.speed_info.configure(state="disabled")
 
     def position_entry_updater(self):
@@ -390,12 +445,12 @@ class App(customtkinter.CTk, robot_controller):
         self.servo_4_pos_info.configure(state="normal")
         self.servo_5_pos_info.configure(state="normal")
         self.servo_6_pos_info.configure(state="normal")
-        self.servo_1_pos_info.configure(placeholder_text="Servo 1 Pos : "+ str(self.servo_1_pos) +" deg")
-        self.servo_2_pos_info.configure(placeholder_text="Servo 2 Pos : "+ str(self.servo_2_pos) +" deg")
-        self.servo_3_pos_info.configure(placeholder_text="Servo 3 Pos : "+ str(self.servo_3_pos) +" deg")
-        self.servo_4_pos_info.configure(placeholder_text="Servo 4 Pos : "+ str(self.servo_4_pos) +" deg")
-        self.servo_5_pos_info.configure(placeholder_text="Servo 5 Pos : "+ str(self.servo_5_pos) +" deg")
-        self.servo_6_pos_info.configure(placeholder_text="Servo 6 Pos : "+ str(self.servo_6_pos) +" deg")
+        self.servo_1_pos_info.configure(placeholder_text="Servo 1 Pos : "+ str(servo_1_pos) +" deg")
+        self.servo_2_pos_info.configure(placeholder_text="Servo 2 Pos : "+ str(servo_2_pos) +" deg")
+        self.servo_3_pos_info.configure(placeholder_text="Servo 3 Pos : "+ str(servo_3_pos) +" deg")
+        self.servo_4_pos_info.configure(placeholder_text="Servo 4 Pos : "+ str(servo_4_pos) +" deg")
+        self.servo_5_pos_info.configure(placeholder_text="Servo 5 Pos : "+ str(servo_5_pos) +" deg")
+        self.servo_6_pos_info.configure(placeholder_text="Servo 6 Pos : "+ str(servo_6_pos) +" deg")
         self.servo_1_pos_info.configure(state="disabled")
         self.servo_2_pos_info.configure(state="disabled")
         self.servo_3_pos_info.configure(state="disabled")
@@ -439,17 +494,17 @@ class App(customtkinter.CTk, robot_controller):
 
     def connection_handler(self):
         print("connect to robot called")
-        if self.communication_state == 0:
+        if communication_state == 0:
             log_to_console.info(self, "Connect to robot is requested")
-            if self.connect():
+            if self.connect_method.connect():
                 self.connection_btn.configure(fg_color="green",text="Connected")
                 log_to_console.info(self, "Connect to robot is requested")
             else:
                 log_to_console.error(self, "Connect to robot is faild")
 
-        elif self.communication_state == 1:
+        elif communication_state == 1:
             self.connection_btn.configure(fg_color="red", text="Disconnected")
-            self.disconnect()
+            self.connect_method.disconnect()
             log_to_console.warning(self, "Disconnect to robot is requested")
 
 class log_to_console(App):
@@ -476,6 +531,18 @@ class log_to_console(App):
 
 
 
+def print_():    
+    print("msg")
+
 if __name__ == "__main__":
-    app = App()
-    app.mainloop()
+    try:
+        app = App()
+        # thread_run = threading.Thread(target=robot_controller.data_diff_checker(app), daemon=True)
+        thread_run = threading.Timer(1, print_)
+
+        app.mainloop()
+
+        thread_run.start()
+    except KeyboardInterrupt:
+        print("keyboard interrupt")
+        thread_run.join()
