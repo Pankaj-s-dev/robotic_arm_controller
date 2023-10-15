@@ -120,11 +120,16 @@ class robot_controller():
         return
 
     def write_jog_pos(self, position, servo_id):
-        execution_type = 1
+        execution_type = 2
         while servo_id in self.valid_servo_id:
-            tcp_msg = f"[{execution_type}][{position}][{self.servo_speed}][{servo_id}]"
-            print(f"send TCP MSG [{tcp_msg}]")
-            
+            try:
+                tcp_msg = f"[{execution_type}][{position}][{self.servo_speed}][{servo_id}]"
+                print(f"send TCP MSG [{tcp_msg}]")
+                self.ser.write(bytes(tcp_msg, 'utf-8'))
+                break
+            except:
+                print("[Error] : ocurred in jog while writing")
+                break
         else:
             print(f"[ERROR] : wrong input servo id {servo_id}")
 
@@ -421,35 +426,35 @@ class App(customtkinter.CTk, robot_controller):
         slider_val=self.translate(value, 1, 100, 1, 180)
         self.servo_1_pos=slider_val
         self.seg_button_1.set("Servo 1")
-        threading.Thread(target=self.data_diff_checker).start()
+        threading.Thread(target=self.write_jog_pos, args=(self.servo_1_pos, 1)).start()
         self.position_entry_updater()
 
     def servo_2_position_updater(self, value):
         self.servo_2_state.set(value) 
         self.servo_2_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 2")
-        threading.Thread(target=self.data_diff_checker).start()
+        threading.Thread(target=self.write_jog_pos, args=(self.servo_2_pos, 2)).start()
         self.position_entry_updater()
 
     def servo_3_position_updater(self, value):
         self.servo_3_state.set(value) 
         self.servo_3_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 3")
-        threading.Thread(target=self.data_diff_checker).start()
+        threading.Thread(target=self.write_jog_pos, args=(self.servo_3_pos, 3)).start()
         self.position_entry_updater()
 
     def servo_4_position_updater(self, value):
         self.servo_4_state.set(value) 
         self.servo_4_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 4")
-        threading.Thread(target=self.data_diff_checker).start()
+        threading.Thread(target=self.write_jog_pos, args=(self.servo_4_pos, 4)).start()
         self.position_entry_updater()
 
     def servo_5_position_updater(self, value):
         self.servo_5_state.set(value) 
         self.servo_5_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 5")
-        threading.Thread(target=self.data_diff_checker).start()
+        threading.Thread(target=self.write_jog_pos, args=(self.servo_5_pos, 5)).start()
         self.position_entry_updater()
 
     def servo_6_position_updater(self, value):
@@ -459,7 +464,7 @@ class App(customtkinter.CTk, robot_controller):
             self.servo_6_pos = 70
         self.servo_6_pos = value
         self.seg_button_1.set("Servo 6")
-        threading.Thread(target=self.data_diff_checker).start()
+        threading.Thread(target=self.write_jog_pos, args=(self.servo_6_pos, 6)).start()
         self.position_entry_updater()
 
     def speed_updater(self, value):
@@ -563,8 +568,6 @@ class log_to_console(App):
         self.console.configure(state="normal")
         self.console.insert("insert",f"[ERROR] : [{time_stamp}] -> [{msg}]\n")
         self.console.configure(state="disabled")
-
-
 
 
 if __name__ == "__main__":
