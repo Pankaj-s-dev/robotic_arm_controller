@@ -93,24 +93,15 @@ class robot_controller():
         print("running")
         log_to_console.info(self.logself, "data_diff_checker running")
         while self.communication_state:
-            if self.servo_1_pos != self.servo_1_pos_written:
+
+            if self.servo_1_pos != self.servo_1_pos_written or self.servo_2_pos != self.servo_2_pos_written or self.servo_3_pos != self.servo_3_pos_written:
                 self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
                 break
-            elif self.servo_2_pos != self.servo_2_pos_written:
+
+            elif self.servo_4_pos != self.servo_4_pos_written or self.servo_5_pos != self.servo_5_pos_written or self.servo_6_pos != self.servo_6_pos_written:
                 self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
                 break
-            elif self.servo_3_pos != self.servo_3_pos_written:
-                self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
-                break
-            elif self.servo_4_pos != self.servo_4_pos_written:
-                self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
-                break
-            elif self.servo_5_pos != self.servo_5_pos_written:
-                self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
-                break
-            elif self.servo_6_pos != self.servo_6_pos_written:
-                self.rx_tx_with_robot(self.servo_1_pos, self.servo_2_pos, self.servo_3_pos, self.servo_4_pos, self.servo_5_pos, self.servo_6_pos, self.servo_speed)
-                break
+
             else:
                 print(self.servo_1_pos, self.servo_1_pos_written)
                 print(self.servo_2_pos, self.servo_2_pos_written)
@@ -126,6 +117,39 @@ class robot_controller():
             print("please connect the Controller to Robot")
 
         return
+    
+    def making_thread_for_jog(self):
+        while True:
+            while self.communication_state:
+                print("thread started")
+                if self.servo_1_pos != self.servo_1_pos_written:
+                    self.servo_1_pos_written = self.servo_1_pos
+                    self.write_jog_pos(self.servo_1_pos, 1)
+
+                elif self.servo_2_pos != self.servo_2_pos_written:
+                    self.write_jog_pos(self.servo_2_pos, 2)
+
+                elif self.servo_3_pos != self.servo_3_pos_written:
+                    self.write_jog_pos(self.servo_3_pos, 3)
+
+                elif self.servo_4_pos != self.servo_4_pos_written:
+                    self.write_jog_pos(self.servo_4_pos, 4)
+
+                elif self.servo_5_pos != self.servo_5_pos_written:
+                    self.write_jog_pos(self.servo_5_pos, 5)
+
+                elif self.servo_6_pos != self.servo_6_pos_written:
+                    self.write_jog_pos(self.servo_6_pos, 6)
+
+                else:
+                    print("No changes")
+                    log_to_console.warning(self.logself, "Input Provided is Wrong")
+                time.sleep(0.4)    
+            else:
+                log_to_console.info(self.logself, "Please connect the controller to the Robotic arm")
+                print("please connect the Controller to Robot")
+                time.sleep(0.8)
+
 
     def write_jog_pos(self, position, servo_id):
         execution_type = 2
@@ -135,7 +159,18 @@ class robot_controller():
                 print(f"send TCP MSG [{tcp_msg}]")
                 log_to_console.info(self.logself, f"Sent frame {tcp_msg}")
                 self.ser.write(bytes(tcp_msg, 'utf-8'))
-                break
+                content = self.ser.readline()
+                content = str(content, 'UTF-8')
+                print(content)
+                log_to_console.info(self.logself, f"Recived frame {content}")
+                if content == "ok\r\n":
+                    print("writing done")
+                    log_to_console.info(self.logself, f"writing done")
+                    break
+                else:
+                    print("error")
+                    log_to_console.error(self.logself, f"Response Error")
+                    break
             except:
                 print("[Error] : ocurred in jog while writing")
                 log_to_console.error(self.logself, "Ocurred in jog while writing")
@@ -239,7 +274,6 @@ class App(customtkinter.CTk, robot_controller):
         # using log_to_console as log
         log_to_console.__init__(self)
 
-        # threading.Timer(1, self.print_()).start()
 
         # configure window
         self.title("Robot Controller")
@@ -445,6 +479,9 @@ class App(customtkinter.CTk, robot_controller):
 
 
         self.set_initial_parameter()
+    
+        threading.Thread(target=self.making_thread_for_jog, daemon=False).start()
+        
 
     def set_initial_parameter(self):
         # set default values
@@ -477,35 +514,35 @@ class App(customtkinter.CTk, robot_controller):
         slider_val=self.translate(value, 1, 100, 1, 180)
         self.servo_1_pos=slider_val
         self.seg_button_1.set("Servo 1")
-        threading.Thread(target=self.write_jog_pos, args=(self.servo_1_pos, 1)).start()
+        # threading.Thread(target=self.write_jog_pos, args=(self.servo_1_pos, 1)).start()
         self.position_entry_updater()
 
     def servo_2_position_updater(self, value):
         self.servo_2_state.set(value) 
         self.servo_2_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 2")
-        threading.Thread(target=self.write_jog_pos, args=(self.servo_2_pos, 2)).start()
+        # threading.Thread(target=self.write_jog_pos, args=(self.servo_2_pos, 2)).start()
         self.position_entry_updater()
 
     def servo_3_position_updater(self, value):
         self.servo_3_state.set(value) 
         self.servo_3_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 3")
-        threading.Thread(target=self.write_jog_pos, args=(self.servo_3_pos, 3)).start()
+        # threading.Thread(target=self.write_jog_pos, args=(self.servo_3_pos, 3)).start()
         self.position_entry_updater()
 
     def servo_4_position_updater(self, value):
         self.servo_4_state.set(value) 
         self.servo_4_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 4")
-        threading.Thread(target=self.write_jog_pos, args=(self.servo_4_pos, 4)).start()
+        # threading.Thread(target=self.write_jog_pos, args=(self.servo_4_pos, 4)).start()
         self.position_entry_updater()
 
     def servo_5_position_updater(self, value):
         self.servo_5_state.set(value) 
         self.servo_5_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 5")
-        threading.Thread(target=self.write_jog_pos, args=(self.servo_5_pos, 5)).start()
+        # threading.Thread(target=self.write_jog_pos, args=(self.servo_5_pos, 5)).start()
         self.position_entry_updater()
 
     def servo_6_position_updater(self, value):
@@ -515,7 +552,7 @@ class App(customtkinter.CTk, robot_controller):
             self.servo_6_pos = 70
         self.servo_6_pos = value
         self.seg_button_1.set("Servo 6")
-        threading.Thread(target=self.write_jog_pos, args=(self.servo_6_pos, 6)).start()
+        # threading.Thread(target=self.write_jog_pos, args=(self.servo_6_pos, 6)).start()
         self.position_entry_updater()
 
     def speed_updater(self, value):
