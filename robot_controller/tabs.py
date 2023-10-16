@@ -286,7 +286,7 @@ class App(customtkinter.CTk, robot_controller):
         # create sidebar frame with widgets
         self.sidebar_frame = customtkinter.CTkFrame(self, width=140, corner_radius=0)
         self.sidebar_frame.grid(row=0, column=0, rowspan=4, sticky="nsew")
-        self.sidebar_frame.grid_rowconfigure(4, weight=1)
+        self.sidebar_frame.grid_rowconfigure(5, weight=1)
         self.logo_label = customtkinter.CTkLabel(self.sidebar_frame, text="Controller", font=customtkinter.CTkFont(size=20, weight="bold"))
         self.logo_label.grid(row=0, column=0, padx=20, pady=(20, 10))
         self.sidebar_button_1 = customtkinter.CTkButton(self.sidebar_frame, text="Home", command=self.sidebar_button_event)
@@ -295,12 +295,14 @@ class App(customtkinter.CTk, robot_controller):
         self.sidebar_button_2.grid(row=2, column=0, padx=20, pady=10)
         self.sidebar_button_3 = customtkinter.CTkButton(self.sidebar_frame, text="About", command=self.sidebar_button_event)
         self.sidebar_button_3.grid(row=3, column=0, padx=20, pady=10)
-        self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text="Appearance :", anchor="w", font=customtkinter.CTkFont(size=16))
+        self.home_arm = customtkinter.CTkButton(self.sidebar_frame, text="Home ARM", command=self.start_homing)
+        self.home_arm.grid(row=4, column=0, padx=20, pady=10)
+        self.appearance_mode_label = customtkinter.CTkLabel(self.sidebar_frame, text=" ", anchor="w", font=customtkinter.CTkFont(size=16))
         self.appearance_mode_label.grid(row=5, column=0, padx=20, pady=(10, 0))
         self.appearance_mode_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["Light", "Dark", "System"],
                                                                        command=self.change_appearance_mode_event)
         self.appearance_mode_optionemenu.grid(row=6, column=0, padx=20, pady=(10, 10))
-        self.scaling_label = customtkinter.CTkLabel(self.sidebar_frame, text="UI Scaling:", anchor="w")
+        self.scaling_label = customtkinter.CTkLabel(self.sidebar_frame, text="", anchor="w")
         self.scaling_label.grid(row=7, column=0, padx=20, pady=(10, 0))
         self.scaling_optionemenu = customtkinter.CTkOptionMenu(self.sidebar_frame, values=["80%", "90%", "100%", "110%", "120%"],
                                                                command=self.change_scaling_event)
@@ -317,77 +319,82 @@ class App(customtkinter.CTk, robot_controller):
         # create tabview
         self.tabview = customtkinter.CTkTabview(self)
         self.tabview.grid(row=0, column=1, columnspan=2,padx=(20, 20), pady=(0, 0), sticky="nsew")
-        self.tabview.add("Manual Mode")
-        self.tabview.add("Programming Mode")
+        self.tabview.add("Teach Mode")
         self.tabview.add("Debug Mode")
 
-        # configuring manual mode tab grid
-        self.tabview.tab("Manual Mode").grid_rowconfigure(0, weight=0)  # configure grid of individual tabs
-        self.tabview.tab("Manual Mode").grid_rowconfigure(1, weight=1)  # configure grid of individual tabs
-        self.tabview.tab("Manual Mode").grid_columnconfigure((0,1,2,3,4,5,6,7,8,9,10,11,12,13), weight=1)
+        # configuring Teach mode tab grid
+        self.tabview.tab("Teach Mode").grid_rowconfigure(0, weight=0)  # configure grid of individual tabs
+        self.tabview.tab("Teach Mode").grid_rowconfigure(1, weight=90)  # configure grid of individual tabs
+        self.tabview.tab("Teach Mode").grid_rowconfigure(3, weight=5)  # configure grid of individual tabs
+        self.tabview.tab("Teach Mode").grid_columnconfigure((0,1,2,3,4,5,6,7,8,9,10,11), weight=1)
 
-        # adding servo id for manual mode
-        self.seg_button_1 = customtkinter.CTkSegmentedButton( self.tabview.tab("Manual Mode"))
-        self.seg_button_1.grid(row=0, column=0, columnspan=14, padx=0, pady=(10, 10), sticky="nsew")
+        # adding servo id for Teach mode
+        self.seg_button_1 = customtkinter.CTkSegmentedButton( self.tabview.tab("Teach Mode"))
+        self.seg_button_1.grid(row=0, column=0, columnspan=12, padx=0, pady=(10, 10), sticky="nsew")
 
         # slider for jogging the arm 
         self.row_for_slider = 1
         # Servo ID = 1
-        self.servo_1 = customtkinter.CTkSlider( self.tabview.tab("Manual Mode"),  orientation="vertical", command=self.servo_1_position_updater)
+        self.servo_1 = customtkinter.CTkSlider( self.tabview.tab("Teach Mode"),  orientation="vertical", command=self.servo_1_position_updater)
         self.servo_1.grid(row=self.row_for_slider, column=0, padx=(10, 10), pady=(10, 10), sticky="ns")
-        self.servo_1_state = customtkinter.CTkProgressBar( self.tabview.tab("Manual Mode"), orientation="vertical")
+        self.servo_1_state = customtkinter.CTkProgressBar( self.tabview.tab("Teach Mode"), orientation="vertical")
         self.servo_1_state.grid(row=self.row_for_slider, column=1, padx=(10, 10), pady=(10, 10), sticky="ns")
         # Servo ID = 2
-        self.servo_2 = customtkinter.CTkSlider( self.tabview.tab("Manual Mode"), orientation="vertical", command=self.servo_2_position_updater)
+        self.servo_2 = customtkinter.CTkSlider( self.tabview.tab("Teach Mode"), orientation="vertical", command=self.servo_2_position_updater)
         self.servo_2.grid(row=self.row_for_slider, column=2, pady=(10, 10), sticky="ns")
-        self.servo_2_state = customtkinter.CTkProgressBar( self.tabview.tab("Manual Mode"), orientation="vertical")
+        self.servo_2_state = customtkinter.CTkProgressBar( self.tabview.tab("Teach Mode"), orientation="vertical")
         self.servo_2_state.grid(row=self.row_for_slider, column=3, padx=(10, 10), pady=(10, 10), sticky="ns")
         # Servo ID = 3
-        self.servo_3 = customtkinter.CTkSlider( self.tabview.tab("Manual Mode"), orientation="vertical", command=self.servo_3_position_updater)
+        self.servo_3 = customtkinter.CTkSlider( self.tabview.tab("Teach Mode"), orientation="vertical", command=self.servo_3_position_updater)
         self.servo_3.grid(row=self.row_for_slider, column=4, pady=(10, 10), sticky="ns")
-        self.servo_3_state = customtkinter.CTkProgressBar( self.tabview.tab("Manual Mode"), orientation="vertical")
+        self.servo_3_state = customtkinter.CTkProgressBar( self.tabview.tab("Teach Mode"), orientation="vertical")
         self.servo_3_state.grid(row=self.row_for_slider, column=5, padx=(10, 10), pady=(10, 10), sticky="ns")
         # Servo ID = 4
-        self.servo_4 = customtkinter.CTkSlider( self.tabview.tab("Manual Mode"), orientation="vertical", command=self.servo_4_position_updater)
+        self.servo_4 = customtkinter.CTkSlider( self.tabview.tab("Teach Mode"), orientation="vertical", command=self.servo_4_position_updater)
         self.servo_4.grid(row=self.row_for_slider, column=6, pady=(10, 10), sticky="ns")
-        self.servo_4_state = customtkinter.CTkProgressBar( self.tabview.tab("Manual Mode"), orientation="vertical")
+        self.servo_4_state = customtkinter.CTkProgressBar( self.tabview.tab("Teach Mode"), orientation="vertical")
         self.servo_4_state.grid(row=self.row_for_slider, column=7, padx=(10, 10), pady=(10, 10), sticky="ns")
         # Servo ID = 5
-        self.servo_5 = customtkinter.CTkSlider( self.tabview.tab("Manual Mode"), orientation="vertical", command=self.servo_5_position_updater)
+        self.servo_5 = customtkinter.CTkSlider( self.tabview.tab("Teach Mode"), orientation="vertical", command=self.servo_5_position_updater)
         self.servo_5.grid(row=self.row_for_slider, column=8, pady=(10, 10), sticky="ns")
-        self.servo_5_state = customtkinter.CTkProgressBar( self.tabview.tab("Manual Mode"), orientation="vertical")
+        self.servo_5_state = customtkinter.CTkProgressBar( self.tabview.tab("Teach Mode"), orientation="vertical")
         self.servo_5_state.grid(row=self.row_for_slider, column=9, padx=(10, 10), pady=(10, 10), sticky="ns")
         # Servo ID = 6
-        self.servo_6 = customtkinter.CTkSlider( self.tabview.tab("Manual Mode"), orientation="vertical", command=self.servo_6_position_updater)
+        self.servo_6 = customtkinter.CTkSlider( self.tabview.tab("Teach Mode"), orientation="vertical", command=self.servo_6_position_updater)
         self.servo_6.grid(row=self.row_for_slider, column=10, pady=(10, 10), sticky="ns")
-        self.servo_6_state = customtkinter.CTkProgressBar( self.tabview.tab("Manual Mode"), orientation="vertical")
+        self.servo_6_state = customtkinter.CTkProgressBar( self.tabview.tab("Teach Mode"), orientation="vertical")
         self.servo_6_state.grid(row=self.row_for_slider, column=11, padx=(10, 10), pady=(10, 10), sticky="ns")
-        # SServo Speed
-        self.speed = customtkinter.CTkSlider( self.tabview.tab("Manual Mode"), orientation="vertical", command=self.speed_updater)
-        self.speed.grid(row=self.row_for_slider, column=12, pady=(10, 10), sticky="ns")
-        self.speed_state = customtkinter.CTkProgressBar( self.tabview.tab("Manual Mode"), orientation="vertical")
-        self.speed_state.grid(row=self.row_for_slider, column=13, padx=(10, 10), pady=(10, 10), sticky="ns")
-    
-        self.servo_1_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 1 Pos : "+ str(self.servo_1_pos) +" deg")
+
+        self.stick_for_programming=""
+
+        self.record_pos = customtkinter.CTkButton(self.tabview.tab("Teach Mode"), text="Record Pos", command=self.record_pos)
+        self.record_pos.grid(row=3, column=0, columnspan=2, pady=(10, 10))
+
+        self.start_execution = customtkinter.CTkButton(self.tabview.tab("Teach Mode"), text="Start Execution", command=self.start_program)
+        self.start_execution.grid(row=3, column=5, columnspan=2, pady=(10, 10))
+
+        self.stop_execution = customtkinter.CTkButton(self.tabview.tab("Teach Mode"), text="Stop Execution", command=self.stop_program)
+        self.stop_execution.grid(row=3, column=10, columnspan=2, pady=(10, 10))
+
+
+        self.servo_1_pos_info = customtkinter.CTkEntry(self.tabview.tab("Teach Mode"), placeholder_text="Servo 1 Pos : "+ str(self.servo_1_pos) +" deg")
         self.servo_1_pos_info.grid(row=2, column=0, columnspan=2,  pady=(10, 10), sticky="n")        
 
-        self.servo_2_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 2 Pos : "+ str(self.servo_2_pos) +" deg")
+        self.servo_2_pos_info = customtkinter.CTkEntry(self.tabview.tab("Teach Mode"), placeholder_text="Servo 2 Pos : "+ str(self.servo_2_pos) +" deg")
         self.servo_2_pos_info.grid(row=2, column=2, columnspan=2,  pady=(10, 10), sticky="n") 
 
-        self.servo_3_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 3 Pos : "+ str(self.servo_3_pos) +" deg")
+        self.servo_3_pos_info = customtkinter.CTkEntry(self.tabview.tab("Teach Mode"), placeholder_text="Servo 3 Pos : "+ str(self.servo_3_pos) +" deg")
         self.servo_3_pos_info.grid(row=2, column=4, columnspan=2,  pady=(10, 10), sticky="n") 
 
-        self.servo_4_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 4 Pos : "+ str(self.servo_4_pos) +" deg")
+        self.servo_4_pos_info = customtkinter.CTkEntry(self.tabview.tab("Teach Mode"), placeholder_text="Servo 4 Pos : "+ str(self.servo_4_pos) +" deg")
         self.servo_4_pos_info.grid(row=2, column=6, columnspan=2,  pady=(10, 10), sticky="n") 
 
-        self.servo_5_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 5 Pos : "+ str(self.servo_5_pos) +" deg")
+        self.servo_5_pos_info = customtkinter.CTkEntry(self.tabview.tab("Teach Mode"), placeholder_text="Servo 5 Pos : "+ str(self.servo_5_pos) +" deg")
         self.servo_5_pos_info.grid(row=2, column=8, columnspan=2,  pady=(10, 10), sticky="n") 
 
-        self.servo_6_pos_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo 6 Pos : "+ str(self.servo_6_pos) +" deg")
+        self.servo_6_pos_info = customtkinter.CTkEntry(self.tabview.tab("Teach Mode"), placeholder_text="Servo 6 Pos : "+ str(self.servo_6_pos) +" deg")
         self.servo_6_pos_info.grid(row=2, column=10, columnspan=2,  pady=(10, 10), sticky="n") 
 
-        self.speed_info = customtkinter.CTkEntry(self.tabview.tab("Manual Mode"), placeholder_text="Servo Speed : "+ str(self.servo_speed) +" %")
-        self.speed_info.grid(row=2, column=12, columnspan=2,  pady=(10, 10), sticky="n")
 
         # Programming Mode mode tab grid
         self.tabview.tab("Debug Mode").columnconfigure((0), weight=1)
@@ -403,79 +410,6 @@ class App(customtkinter.CTk, robot_controller):
         self.console.configure(state="disabled")
         self.logself=self
 
-        # Programming Mode mode tab grid
-        self.tabview.tab("Programming Mode").columnconfigure((0,1,2,3,4,5), weight=1)
-        self.tabview.tab("Programming Mode").rowconfigure((0,1,2), weight=1)
-
-        self.stick_for_programming=""
-
-        self.move_front = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Front")
-        self.move_front.grid(row=0, column=1, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
-
-        self.action_move_front=push_action(self, "Move Front", self.console)
-        self.move_front.bind("<ButtonPress-1>", self.action_move_front.start_action)  # Bind mouse button press to start action
-        self.move_front.bind("<ButtonRelease-1>", self.action_move_front.stop_action)  # Bind mouse button release to stop action
-
-        self.move_back = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Back")
-        self.move_back.grid(row=2, column=1, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
-
-        self.action_move_back=push_action(self, "Move Back", self.console)
-        self.move_back.bind("<ButtonPress-1>", self.action_move_back.start_action)  # Bind mouse button press to start action
-        self.move_back.bind("<ButtonRelease-1>", self.action_move_back.stop_action)  # Bind mouse button release to stop action
-
-        self.move_left = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Left")
-        self.move_left.grid(row=1, column=0, pady=(10, 10), ipady=(2),sticky=self.stick_for_programming)
-        
-        self.action_move_left=push_action(self, "Move Left", self.console)
-        self.move_left.bind("<ButtonPress-1>", self.action_move_left.start_action)  # Bind mouse button press to start action
-        self.move_left.bind("<ButtonRelease-1>", self.action_move_left.stop_action)  # Bind mouse button release to stop action
-
-        self.move_right = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Right")
-        self.move_right.grid(row=1, column=2, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
-
-        self.action_move_right=push_action(self, "Move Right", self.console)
-        self.move_right.bind("<ButtonPress-1>", self.action_move_right.start_action)  # Bind mouse button press to start action
-        self.move_right.bind("<ButtonRelease-1>", self.action_move_right.stop_action)  # Bind mouse button release to stop action
-
-        self.move_up = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Up")
-        self.move_up.grid(row=0, column=3, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
-
-        self.action_move_up=push_action(self, "Move Up", self.console)
-        self.move_up.bind("<ButtonPress-1>", self.action_move_up.start_action)  # Bind mouse button press to start action
-        self.move_up.bind("<ButtonRelease-1>", self.action_move_up.stop_action)  # Bind mouse button release to stop action
-
-        self.move_down = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Move Down")
-        self.move_down.grid(row=2, column=3, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
-
-        self.action_move_down=push_action(self, "Move Down", self.console)
-        self.move_down.bind("<ButtonPress-1>", self.action_move_down.start_action)  # Bind mouse button press to start action
-        self.move_down.bind("<ButtonRelease-1>", self.action_move_down.stop_action)  # Bind mouse button release to stop action
-
-        self.open_gripper = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Open Gripper")
-        self.open_gripper.grid(row=0, column=4, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
-
-        self.action_open_gripper=push_action(self, "Open Gripper", self.console)
-        self.open_gripper.bind("<ButtonPress-1>", self.action_open_gripper.start_action)  # Bind mouse button press to start action
-        self.open_gripper.bind("<ButtonRelease-1>", self.action_open_gripper.stop_action)  # Bind mouse button release to stop action
-
-        self.close_gripper = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Close Gripper")
-        self.close_gripper.grid(row=2, column=4, pady=(10, 10),ipady=(2), sticky=self.stick_for_programming)
-
-        self.action_close_gripper=push_action(self, "Close Gripper", self.console)
-        self.close_gripper.bind("<ButtonPress-1>", self.action_close_gripper.start_action)  # Bind mouse button press to start action
-        self.close_gripper.bind("<ButtonRelease-1>", self.action_close_gripper.stop_action)  # Bind mouse button release to stop action
-
-        self.record_pos = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Record Pos", command=self.record_pos)
-        self.record_pos.grid(row=0, column=5, pady=(10, 10), ipady=(2),sticky=self.stick_for_programming)
-
-        self.start_execution = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Start Execution", command=self.start_program)
-        self.start_execution.grid(row=1, column=5, pady=(10, 10), ipady=(2),sticky=self.stick_for_programming)
-
-        self.stop_execution = customtkinter.CTkButton(self.tabview.tab("Programming Mode"), text="Stop Execution", command=self.stop_program)
-        self.stop_execution.grid(row=2, column=5, pady=(10, 10), ipady=(2), sticky=self.stick_for_programming)
-
-        self.execution_speed = customtkinter.CTkSlider( self.tabview.tab("Programming Mode"), orientation="horizontal", command=self.speed_updater)
-        self.execution_speed.grid(row=1, column=3, columnspan=2, padx=(20, 20), sticky="ew")
 
 
         self.set_initial_parameter()
@@ -490,7 +424,7 @@ class App(customtkinter.CTk, robot_controller):
         self.appearance_mode_optionemenu.set("Dark")
         self.scaling_optionemenu.set("100%")
 
-        self.seg_button_1.configure(values=["Servo 1", "Servo 2", "Servo 3", "Servo 4", "Servo 5", "Servo 6", "Servo Speed"])
+        self.seg_button_1.configure(values=["Servo 1", "Servo 2", "Servo 3", "Servo 4", "Servo 5", "Servo 6"])
         self.seg_button_1.set("Servo 1")
 
         self.entry.configure(state="disabled")
@@ -500,7 +434,6 @@ class App(customtkinter.CTk, robot_controller):
         self.servo_4_pos_info.configure(state="disabled")
         self.servo_5_pos_info.configure(state="disabled")
         self.servo_6_pos_info.configure(state="disabled")
-        self.speed_info.configure(state="disabled")
 
         self.servo_1_state.set(self.translate_slider(self.servo_1_pos, 0, 180, 0, 1))
         self.servo_2_state.set(self.translate_slider(self.servo_2_pos, 0, 180, 0, 1))
@@ -521,28 +454,24 @@ class App(customtkinter.CTk, robot_controller):
         self.servo_2_state.set(value) 
         self.servo_2_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 2")
-        # threading.Thread(target=self.write_jog_pos, args=(self.servo_2_pos, 2)).start()
         self.position_entry_updater()
 
     def servo_3_position_updater(self, value):
         self.servo_3_state.set(value) 
         self.servo_3_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 3")
-        # threading.Thread(target=self.write_jog_pos, args=(self.servo_3_pos, 3)).start()
         self.position_entry_updater()
 
     def servo_4_position_updater(self, value):
         self.servo_4_state.set(value) 
         self.servo_4_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 4")
-        # threading.Thread(target=self.write_jog_pos, args=(self.servo_4_pos, 4)).start()
         self.position_entry_updater()
 
     def servo_5_position_updater(self, value):
         self.servo_5_state.set(value) 
         self.servo_5_pos=self.translate(value, 1, 100, 1, 180)
         self.seg_button_1.set("Servo 5")
-        # threading.Thread(target=self.write_jog_pos, args=(self.servo_5_pos, 5)).start()
         self.position_entry_updater()
 
     def servo_6_position_updater(self, value):
@@ -552,16 +481,8 @@ class App(customtkinter.CTk, robot_controller):
             self.servo_6_pos = 70
         self.servo_6_pos = value
         self.seg_button_1.set("Servo 6")
-        # threading.Thread(target=self.write_jog_pos, args=(self.servo_6_pos, 6)).start()
         self.position_entry_updater()
 
-    def speed_updater(self, value):
-        self.speed_state.set(value)
-        self.servo_speed=self.translate(value, 1, 100, 1, 100)
-        self.seg_button_1.set("Servo Speed")
-        self.speed_info.configure(state="normal")
-        self.speed_info.configure(placeholder_text="Servo Speed : "+ str(self.servo_speed) +" %")
-        self.speed_info.configure(state="disabled")
 
     def position_entry_updater(self):
         self.servo_1_pos_info.configure(state="normal")
@@ -582,6 +503,30 @@ class App(customtkinter.CTk, robot_controller):
         self.servo_4_pos_info.configure(state="disabled")
         self.servo_5_pos_info.configure(state="disabled")
         self.servo_6_pos_info.configure(state="disabled")
+
+    def start_homing(self):
+        threading.Thread(target= self.home_arm_request, daemon=False).start()
+
+    def home_arm_request(self):
+        print( "Homing called")
+        try:
+            log_to_console.info(self, "Homing called")
+            msg_format = "[1]"
+            self.ser.write(bytes(msg_format, 'utf-8'))
+            log_to_console.info(self, "Homing called and has been executed")
+            content = self.ser.readline()
+            content = str(content, 'UTF-8')
+            print(content)
+            log_to_console.info(self.logself, f"Recived frame {content}")
+            if content == "ok\r\n":
+                print("writing done")
+                log_to_console.info(self.logself, f"writing done")
+                
+            else:
+                print("error")
+                log_to_console.error(self.logself, f"Response Error")
+        except:
+            log_to_console.error(self, "Not able to home")
 
 
     def record_pos(self):
@@ -698,9 +643,7 @@ class log_to_console(App):
 
 if __name__ == "__main__":
     try:
-        app = App()
-        # thread_run = threading.Thread(target=robot_controller.data_diff_checker(app), daemon=True)
-        
+        app = App()        
 
         app.mainloop()
 
