@@ -121,33 +121,38 @@ class robot_controller():
     def making_thread_for_jog(self):
         while True:
             while self.communication_state:
-                print("thread started")
+                # print("thread started")
                 if self.servo_1_pos != self.servo_1_pos_written:
                     self.servo_1_pos_written = self.servo_1_pos
                     self.write_jog_pos(self.servo_1_pos, 1)
 
                 elif self.servo_2_pos != self.servo_2_pos_written:
+                    self.servo_2_pos_written = self.servo_2_pos
                     self.write_jog_pos(self.servo_2_pos, 2)
 
                 elif self.servo_3_pos != self.servo_3_pos_written:
+                    self.servo_3_pos_written = self.servo_3_pos
                     self.write_jog_pos(self.servo_3_pos, 3)
 
                 elif self.servo_4_pos != self.servo_4_pos_written:
+                    self.servo_4_pos_written = self.servo_4_pos
                     self.write_jog_pos(self.servo_4_pos, 4)
 
                 elif self.servo_5_pos != self.servo_5_pos_written:
+                    self.servo_5_pos_written = self.servo_5_pos
                     self.write_jog_pos(self.servo_5_pos, 5)
 
                 elif self.servo_6_pos != self.servo_6_pos_written:
+                    self.servo_6_pos_written = self.servo_6_pos
                     self.write_jog_pos(self.servo_6_pos, 6)
 
-                else:
-                    print("No changes")
-                    log_to_console.warning(self.logself, "Input Provided is Wrong")
+                # else:
+                    # print("No changes")
+                    # log_to_console.warning(self.logself, "Input Provided is Wrong")
                 time.sleep(0.4)    
             else:
-                log_to_console.info(self.logself, "Please connect the controller to the Robotic arm")
-                print("please connect the Controller to Robot")
+                # log_to_console.info(self.logself, "Please connect the controller to the Robotic arm")
+                # print("please connect the Controller to Robot")
                 time.sleep(0.8)
 
 
@@ -226,6 +231,7 @@ class robot_controller():
                 msg_format = f"{self.recorded_pos[index]}"
                 print("writing")
                 log_to_console.info(self.logself, f"Sending frame to controller .....")
+                self.ser.flush()
                 self.ser.write(bytes(msg_format, 'utf-8'))
                 print("written")
                 log_to_console.info(self.logself, f"Frame sent.")
@@ -236,16 +242,17 @@ class robot_controller():
                 if content == "ok\r\n":
                     print("writing done")
                     log_to_console.info(self.logself, f"writing done")
-                    break
+                    time.sleep(3)
+                    return
                 else:
                     print("error")
                     log_to_console.error(self.logself, f"Response Error")
-                    break
+                    return
 
             except:
                 print("error ocuured while writing")
                 log_to_console.error(self.logself, f"Error ocuured while writing rx_tx_with_robot")
-                break
+                return
 class push_action():
     def __init__(self, app_name, process_name, console_id_name):
         self.action_running=False
@@ -536,10 +543,13 @@ class App(customtkinter.CTk, robot_controller):
     def execute_(self):
         no_of_cycle = 0
         while no_of_cycle < len(self.recorded_pos):
+            print(no_of_cycle, len(self.recorded_pos))
             self.run_recorded_pos(no_of_cycle)
             print("executing", self.recorded_pos[no_of_cycle])
             log_to_console.info(self, f"executing{self.recorded_pos[no_of_cycle]}")
+            print(no_of_cycle)
             no_of_cycle+=1
+            print(no_of_cycle)
         print("done")
         log_to_console.info(self, "Execution Done")
 
@@ -550,8 +560,9 @@ class App(customtkinter.CTk, robot_controller):
             print("please record the trajectory")
             log_to_console.error(self, "please record the trajectory")
             return
-        t1 = threading.Thread(target=self.execute_)
-        t1.start()
+        # t1 = threading.Thread(target=self.execute_)
+        # t1.start()
+        self.execute_()
 
     def stop_program(self):
         self.recorded_pos.clear()
