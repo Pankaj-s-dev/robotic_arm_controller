@@ -164,7 +164,7 @@ class robot_controller():
                 # else:
                     # print("No changes")
                     # log_to_console.warning(self.logself, "Input Provided is Wrong")
-                time.sleep(0.4)    
+                time.sleep(0.01)    
             else:
                 # log_to_console.info(self.logself, "Please connect the controller to the Robotic arm")
                 # print("please connect the Controller to Robot")
@@ -179,22 +179,23 @@ class robot_controller():
                 print(f"send TCP MSG [{tcp_msg}]")
                 log_to_console.info(self.logself, f"Sent frame {tcp_msg}")
                 self.ser.write(bytes(tcp_msg, 'utf-8'))
-                content = self.ser.readline()
-                content = str(content, 'UTF-8')
-                print(content)
-                log_to_console.info(self.logself, f"Recived frame {content}")
-                if content == "ok\r\n":
-                    print("writing done")
-                    log_to_console.info(self.logself, f"writing done")
-                    break
-                else:
-                    print("error")
-                    log_to_console.error(self.logself, f"Response Error")
-                    break
+                return
+                # content = self.ser.readline()
+                # content = str(content, 'UTF-8')
+                # print(content)
+                # log_to_console.info(self.logself, f"Recived frame {content}")
+                # if content == "ok\r\n":
+                #     print("writing done")
+                #     log_to_console.info(self.logself, f"writing done")
+                #     break
+                # else:
+                #     print("error")
+                #     log_to_console.error(self.logself, f"Response Error")
+                #     break
             except:
                 print("[Error] : ocurred in jog while writing")
                 log_to_console.error(self.logself, "Ocurred in jog while writing")
-                break
+                return
         else:
             print(f"[ERROR] : wrong input servo id {servo_id}")
             log_to_console.error(self.logself, f"wrong input servo id {servo_id}")
@@ -537,7 +538,7 @@ class App(customtkinter.CTk, robot_controller):
 
     def start_homing(self):
         threading.Thread(target= self.home_arm_request, daemon=True).start()
-        self.home_pos_updater_for_slider_info()
+        # self.home_pos_updater_for_slider_info()
 
     def home_arm_request(self):
         print( "Homing called")
@@ -554,6 +555,7 @@ class App(customtkinter.CTk, robot_controller):
                 print("writing done")
                 log_to_console.info(self.logself, f"writing done")
                 self.home_pos_updater()
+                self.home_pos_updater_for_slider_info()
                 
             else:
                 print("error")
@@ -565,6 +567,7 @@ class App(customtkinter.CTk, robot_controller):
     def record_pos(self):
         log_to_console.info(self, f"Recorded Cordinates with frame : [4][{self.servo_1_pos}][{self.servo_2_pos}][{self.servo_3_pos}][{self.servo_4_pos}][{self.servo_5_pos}][{self.servo_6_pos}][{self.servo_speed}]")
         self.recorded_pos.append(f"[4][{self.servo_1_pos}][{self.servo_2_pos}][{self.servo_3_pos}][{self.servo_4_pos}][{self.servo_5_pos}][{self.servo_6_pos}][{self.servo_speed}]")
+        print(len(self.recorded_pos))
 
     def execute_(self):
         no_of_cycle = 0
