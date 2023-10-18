@@ -88,6 +88,21 @@ class robot_controller():
     #     self.communication_state=False
     #     print("[INFO] : Disconnected")
 
+    def home_pos_updater(self) -> None:
+        self.servo_1_pos = 90
+        self.servo_2_pos = 130
+        self.servo_3_pos = 130
+        self.servo_4_pos = 180
+        self.servo_5_pos = 90
+        self.servo_6_pos = 100
+        self.servo_speed = 50
+        self.servo_1_pos_written = 90
+        self.servo_2_pos_written = 130
+        self.servo_3_pos_written = 130
+        self.servo_4_pos_written = 180
+        self.servo_5_pos_written = 90
+        self.servo_6_pos_written = 100
+
     def data_diff_checker(self):
         # while True:
         print("running")
@@ -421,7 +436,7 @@ class App(customtkinter.CTk, robot_controller):
 
         self.set_initial_parameter()
     
-        threading.Thread(target=self.making_thread_for_jog, daemon=False).start()
+        threading.Thread(target=self.making_thread_for_jog, daemon=True).start()
         
 
     def set_initial_parameter(self):
@@ -441,13 +456,22 @@ class App(customtkinter.CTk, robot_controller):
         self.servo_4_pos_info.configure(state="disabled")
         self.servo_5_pos_info.configure(state="disabled")
         self.servo_6_pos_info.configure(state="disabled")
+        self.home_pos_updater_for_slider_info()
 
+    def home_pos_updater_for_slider_info(self):
         self.servo_1_state.set(self.translate_slider(self.servo_1_pos, 0, 180, 0, 1))
         self.servo_2_state.set(self.translate_slider(self.servo_2_pos, 0, 180, 0, 1))
         self.servo_3_state.set(self.translate_slider(self.servo_3_pos, 0, 180, 0, 1))
         self.servo_4_state.set(self.translate_slider(self.servo_4_pos, 0, 180, 0, 1))
         self.servo_5_state.set(self.translate_slider(self.servo_5_pos, 0, 180, 0, 1))
         self.servo_6_state.set(self.translate_slider(self.servo_6_pos, 0, 180, 0, 1))
+
+        self.servo_1.set(self.translate_slider(self.servo_1_pos, 0, 180, 0, 1))
+        self.servo_2.set(self.translate_slider(self.servo_2_pos, 0, 180, 0, 1))
+        self.servo_3.set(self.translate_slider(self.servo_3_pos, 0, 180, 0, 1))
+        self.servo_4.set(self.translate_slider(self.servo_4_pos, 0, 180, 0, 1))
+        self.servo_5.set(self.translate_slider(self.servo_5_pos, 0, 180, 0, 1))
+        self.servo_6.set(self.translate_slider(self.servo_6_pos, 0, 180, 0, 1))
 
     def servo_1_position_updater(self, value):
         self.servo_1_state.set(value) 
@@ -512,7 +536,8 @@ class App(customtkinter.CTk, robot_controller):
         self.servo_6_pos_info.configure(state="disabled")
 
     def start_homing(self):
-        threading.Thread(target= self.home_arm_request, daemon=False).start()
+        threading.Thread(target= self.home_arm_request, daemon=True).start()
+        self.home_pos_updater_for_slider_info()
 
     def home_arm_request(self):
         print( "Homing called")
@@ -528,6 +553,7 @@ class App(customtkinter.CTk, robot_controller):
             if content == "ok\r\n":
                 print("writing done")
                 log_to_console.info(self.logself, f"writing done")
+                self.home_pos_updater()
                 
             else:
                 print("error")
@@ -657,7 +683,6 @@ if __name__ == "__main__":
         app = App()        
 
         app.mainloop()
-
         
     except KeyboardInterrupt:
         print("keyboard interrupt")
