@@ -255,13 +255,24 @@ class robot_controller():
                 content = str(content, 'UTF-8')
                 print(content)
                 log_to_console.info(self.logself, f"Recived frame {content}")
+                timeout = 0
+                while content != "ok\r\n":
+                    if timeout <= 3:
+                        time.sleep(1)
+                        timeout+=1
+                        content = self.ser.readline()
+                        content = str(content, 'UTF-8')
+                        print(content)
+                    else:
+                        print("not able to recive msg")
+                        return
+                        
                 if content == "ok\r\n":
-                    print("writing done")
-                    log_to_console.info(self.logself, f"writing done")
+                    print("Response True")
                     time.sleep(3)
                     return
                 else:
-                    print("error")
+                    print("error occured in running recorded trajectory")
                     log_to_console.error(self.logself, f"Response Error")
                     return
 
@@ -589,9 +600,9 @@ class App(customtkinter.CTk, robot_controller):
             print("please record the trajectory")
             log_to_console.error(self, "please record the trajectory")
             return
-        # t1 = threading.Thread(target=self.execute_)
-        # t1.start()
-        self.execute_()
+        t1 = threading.Thread(target=self.execute_)
+        t1.start()
+        # self.execute_()
 
     def stop_program(self):
         self.recorded_pos.clear()
